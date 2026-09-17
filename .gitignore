@@ -1,0 +1,9 @@
+# 临时文件
+*.log
+*.tmp
+_styled_test.xlsx
+Thumbs.db
+.DS_Store
+
+# 测试临时输出
+tests/_styled_test.xlsx

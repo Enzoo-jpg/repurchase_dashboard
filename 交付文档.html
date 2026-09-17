@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>预计购药分析看板 · 交付文档</title>
+<style>
+:root{--text:#1f2328;--muted:#59636e;--line:#d1d9e0;--bg:#ffffff;--soft:#f6f8fa;--brand:#0969da}
+*{box-sizing:border-box}
+body{margin:0;background:#f2f4f7;color:var(--text);
+  font:15px/1.75 "Microsoft YaHei","PingFang SC","Helvetica Neue",Arial,sans-serif}
+.page{max-width:960px;margin:0 auto;background:var(--bg);padding:44px 54px 72px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08)}
+h1{font-size:27px;line-height:1.35;margin:0 0 8px;padding-bottom:14px;border-bottom:2px solid var(--line)}
+h2{font-size:21px;margin:42px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:30px 0 10px}
+h4{font-size:15px;margin:22px 0 8px}
+p{margin:11px 0}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+code{background:var(--soft);border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font:13px/1.5 Consolas,"Courier New",monospace;color:#0a3069}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto}
+pre code{background:none;border:0;padding:0;color:var(--text);font-size:12.5px;line-height:1.7}
+blockquote{margin:16px 0;padding:10px 16px;border-left:4px solid #d0a215;background:#fffdf3;
+  border-radius:0 8px 8px 0;color:#4d3b00}
+blockquote p{margin:4px 0}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--soft);font-weight:600;white-space:nowrap}
+tr:nth-child(even) td{background:#fcfdfe}
+ul,ol{margin:11px 0;padding-left:26px}
+li{margin:5px 0}
+li.sub{list-style:none;margin-left:-14px}
+.toc{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:16px 22px;margin:26px 0 8px}
+.toc-t{font-weight:600;margin-bottom:6px;font-size:14px;color:var(--muted)}
+.toc ol{margin:0;padding-left:22px;columns:2;column-gap:34px}
+.toc li{margin:3px 0;font-size:14px}
+@media (max-width:720px){.page{padding:24px 18px}.toc ol{columns:1}}
+@media print{
+  body{background:#fff}
+  .page{max-width:none;box-shadow:none;padding:0}
+  h2{page-break-after:avoid}
+  table,pre,blockquote{page-break-inside:avoid}
+  a{color:var(--text)}
+}
+</style>
+</head><body><div class="page">
+<h1 id="预计购药分析看板-交付文档">预计购药分析看板 · 交付文档</h1>
+<blockquote><p>适用版本：<strong>v2026-09-17</strong>（含「购药数量 × 用药周期」与三种周期算法）</p><p>文档定位：<strong>新同事拿到项目后，可以只看这一份</strong>——既能上手日常使用，也能接手维护与二次开发。</p></blockquote>
+<hr>
+<h2 id="0-接手须知先看这一节">0. 接手须知（先看这一节）</h2>
+<p><strong>你拿到的是一个独立副本。</strong> 这个包里<strong>不含 <code>.git</code> 目录</strong>，因此：</p>
+<ul><li>没有指向原团队的远端仓库，<strong>你怎么改、怎么提交，都不会影响原团队那边</strong>；</li><li>同理，原团队后续的更新也不会自动流到你这里——需要同步要主动找他们要新包。</li><li>你可以自由地 <code>git init</code> 建立自己的仓库，历史从零开始。</li></ul>
+<p><strong>环境要求</strong></p>
+<table><thead><tr><th>你要做什么</th><th>需要什么</th></tr></thead><tbody><tr><td>只是用看板（上传表格、导出）</td><td><strong>只需要浏览器</strong>。直接双击 <code>index.single.html</code> 即可，无需安装任何东西</td></tr><tr><td>改代码并重新构建</td><td><strong>Python 3.7+</strong>（跑 <code>build.py</code>）</td></tr><tr><td>跑测试</td><td><strong>Node.js 18+</strong>（测试脚本用 Node 跑）</td></tr></tbody></table>
+<p>依赖已经<strong>全部内置在 <code>vendor/</code> 里</strong>，不需要 <code>npm install</code>，也没有 <code>package.json</code>。</p>
+<p><strong>第一步建议按这个顺序做</strong></p>
+<ol><li>双击 <code>index.single.html</code>，随便找三张表试试，先建立手感；</li><li>读本文第 5 节【核心计算口径】——<strong>这是全项目的心脏</strong>，改代码前必须先看懂它；</li><li>按你的业务需求调参：品种与周期在 <code>mapping.js</code> 的 <code>PRODUCT_FAMILIES</code>，报表列名识别在 <code>KEYWORD_RULES</code>；</li><li>改完跑 <code>python build.py &amp;&amp; python build.py --single</code> 重新生成产物，再跑一遍测试。</li></ol>
+<p><strong>几个必须知道的坑</strong></p>
+<ul><li><code>index.html</code> 与 <code>index.single.html</code> 是<strong>构建产物</strong>，不要手改；改界面改 <code>index.template.html</code>，改逻辑改三个 <code>.js</code>。</li><li>测试脚本默认从<strong>当前用户的 <code>Downloads</code> 目录</strong>读样例 Excel；放在别处就设环境变量：</li></ul>
+<p>  ``<code>bash   SAMPLE_DIR="D:/my_sample_data" node tests/_test_e2e.js   </code>``   （找不到样例文件时相关测试会自动跳过，不影响其余测试）</p>
+<ul><li><strong><code>README.md</code> 的部分内容已过时</strong>（应购药日期公式、周日历口径、导出按钮、Pages 分支等），</li></ul>
+<p>  <strong>以本文件为准</strong>。收到原团队更新时留意这一点。</p>
+<ul><li>文中的线上地址 <code>https://lynx-fanlv.github.io/reperchace_dashboard/</code> 与仓库地址属于<strong>原团队</strong>，</li></ul>
+<p>  <strong>不要往那个仓库推送</strong>；你要发布自己的版本请按 <a href="#122-自己部署一份无仓库权限时">12.2 自己部署一份</a> 操作。</p>
+<p>⚠️ <strong>数据合规</strong>：本项目全程在浏览器内计算、数据不出本机。但<strong>导出名单（不脱敏字段）与随访回传表含明文个人信息</strong>， 仅可在团队内部流转——换到新团队同样适用，详见第 9 节。</p>
+<hr>
+<h2 id="目录">目录</h2>
+<ol><li><a href="#0-接手须知先看这一节">接手须知（先看这一节）</a></li><li><a href="#1-5-分钟上手">5 分钟上手</a></li><li><a href="#2-项目定位与解决的问题">项目定位与解决的问题</a></li><li><a href="#3-交付物清单">交付物清单</a></li><li><a href="#4-数据要求三张表">数据要求（三张表）</a></li><li><a href="#5-核心计算口径最重要">核心计算口径（最重要）</a></li><li><a href="#6-界面操作手册">界面操作手册</a></li><li><a href="#7-导出与快照">导出与快照</a></li><li><a href="#8-随访回传闭环">随访回传闭环</a></li><li><a href="#9-隐私与合规">隐私与合规</a></li><li><a href="#10-维护与二次开发">维护与二次开发</a></li><li><a href="#11-测试">测试</a></li><li><a href="#12-发布部署">发布部署</a></li><li><a href="#13-已知限制与注意事项">已知限制与注意事项</a></li><li><a href="#14-排错-faq">排错 FAQ</a></li><li><a href="#附录-a字段映射关键字全表">附录 A：字段映射关键字全表</a></li><li><a href="#附录-b术语表">附录 B：术语表</a></li></ol>
+<hr>
+<h2 id="1-5-分钟上手">1. 5 分钟上手</h2>
+<p><strong>打开方式（任选其一）</strong></p>
+<table><thead><tr><th>方式</th><th>操作</th><th>适用场景</th></tr></thead><tbody><tr><td>在线</td><td>浏览器打开 https://lynx-fanlv.github.io/reperchace_dashboard/</td><td>日常使用，始终是最新版</td></tr><tr><td>单文件</td><td>双击 <code>index.single.html</code></td><td>离线/无网环境；也是发给同事的最简方式（约 2 MB，库已内联）</td></tr><tr><td>本地源码</td><td><code>python -m http.server 8000</code> 后访问 <code>http://127.0.0.1:8000</code></td><td>二次开发调试</td></tr></tbody></table>
+<p><strong>三个动作就能出结果</strong></p>
+<ol><li><strong>拖入三张表</strong>（销售明细 + 随访任务 + 患者用药周期；后两张可选），系统按表头自动识别类型。</li><li><strong>看状态卡片</strong>：本周应回购多少人、其中应回未回多少、已逾期多少。</li><li><strong>筛选 + 导出</strong>：按品种/医院/药房/随访人筛出要打的名单 → 点「导出名单」出 Excel。</li></ol>
+<blockquote><p>全程纯前端计算，<strong>数据不会离开本机</strong>（无后端、无接口、无埋点）。</p></blockquote>
+<hr>
+<h2 id="2-项目定位与解决的问题">2. 项目定位与解决的问题</h2>
+<p>给医药随访团队用的 <strong>回购预测看板</strong>。输入是常规业务报表，输出是"<strong>这周该催谁、为什么、催了没</strong>"。</p>
+<p>它替人做掉的三件体力活：</p>
+<ol><li><strong>算应购药日期</strong> —— 从销售明细自动算出每个患者每个品种下次该买的日期，不用人工拿计算器按周期推。</li><li><strong>匹配随访记录</strong> —— 自动找到对应那次随访的原始内容（用药状态、停药原因、随访小结），不用在两张表之间来回 V 找。</li><li><strong>判定状态 + 生成话术</strong> —— 把患者分成「应回购（应回未回 / 应回已回）/ 已逾期 / 未到期」，并生成可直接复制到群里的整体小结。</li></ol>
+<p>额外能力：<strong>展示层脱敏</strong>（投屏、共享屏幕时一键隐去姓名电话）、<strong>脱敏快照</strong>（生成不含个人信息的只读网页外发）、<strong>随访回传</strong>（在看板里填的备注，下次分析自动接续）。</p>
+<p>技术形态：<strong>单页 HTML + 纯前端</strong>。逻辑全在浏览器里跑，没有服务器，因此部署成本为零、也不存在数据外泄的服务端环节。</p>
+<hr>
+<h2 id="3-交付物清单">3. 交付物清单</h2>
+<h3 id="31-文件">3.1 文件</h3>
+<pre><code>repurchase_dashboard/
+├── index.html            # 【产物·勿手改】Web 部署版：逻辑已内联，vendor 库走外链
+├── index.single.html     # 【产物·勿手改】单文件版：连 vendor 库也内联，可离线双击
+├── index.template.html   # 【源】HTML 结构 + 全部 CSS —— 改界面改这里
+├── app.js                # 【源】合并计算 / 状态判定 / 筛选 / 渲染 / 导出 / 快照 / 回传
+├── pipeline.js           # 【源】Excel 解析与归一化（三表识别、列映射、脱敏）
+├── mapping.js            # 【源】字段关键字映射 / 品种归一化 / 随访信号与原因分类规则
+├── build.py              # 构建脚本：把三个 js 内联进模板，产出上面两个 html
+├── vendor/
+│   ├── xlsx.full.min.js  # SheetJS —— 浏览器内解析 Excel
+│   └── exceljs.min.js    # ExcelJS —— 生成带样式的导出 Excel
+├── tests/                # Node 验证脚本（19 个，见第 11 节）
+└── README.md             # 简版说明（⚠️ 部分内容已过时，见文末提示）</code></pre>
+<h3 id="32-代码分工改哪里找哪里">3.2 代码分工（改哪里找哪里）</h3>
+<table><thead><tr><th>想改什么</th><th>改哪个文件</th></tr></thead><tbody><tr><td>页面结构、样式、按钮</td><td><code>index.template.html</code></td></tr><tr><td>判定逻辑、列表渲染、导出内容、快照</td><td><code>app.js</code></td></tr><tr><td>Excel 列名识别、新表头兼容、脱敏算法</td><td><code>pipeline.js</code> + <code>mapping.js</code></td></tr><tr><td>品种周期默认值、随访信号关键词、原因分类</td><td><code>mapping.js</code></td></tr></tbody></table>
+<h3 id="33-仓库与分支">3.3 仓库与分支</h3>
+<table><thead><tr><th>分支</th><th>内容</th><th>用途</th></tr></thead><tbody><tr><td><code>main</code></td><td>源码 + 构建产物（<code>index.html</code>、<code>index.single.html</code>）</td><td>开发主线</td></tr><tr><td><code>gh-pages</code></td><td><strong>只有</strong> 单文件版，重命名为 <code>index.html</code></td><td>GitHub Pages 发布源</td></tr></tbody></table>
+<p>仓库地址：<code>https://github.com/Lynx-Fanlv/reperchace_dashboard.git</code></p>
+<hr>
+<h2 id="4-数据要求三张表">4. 数据要求（三张表）</h2>
+<h3 id="41-总览">4.1 总览</h3>
+<table><thead><tr><th>表</th><th>是否必需</th><th>作用</th></tr></thead><tbody><tr><td><strong>销售明细</strong></td><td><strong>必需</strong></td><td>唯一的购药事实来源。没有它整个看板无数据</td></tr><tr><td><strong>随访任务</strong></td><td>可选</td><td>提供随访内容与信号（停药/推迟/正常）；缺省则随访相关列空白，状态仍可判定</td></tr><tr><td><strong>患者用药周期表</strong></td><td>可选</td><td>按患者覆盖周期；缺省则用品种标准周期</td></tr></tbody></table>
+<p><strong>三张表可以一次全拖进去</strong>，系统逐 sheet 按表头自动识别类型。不要求文件名固定，也不要求 sheet 名固定。</p>
+<h3 id="42-销售明细必需">4.2 销售明细（必需）</h3>
+<table><thead><tr><th>列（含容错写法）</th><th>必需</th><th>说明</th></tr></thead><tbody><tr><td>销售时间 / 购药时间 / 成交时间</td><td>✅</td><td>每行一次购药；应购药日期由此推导</td></tr><tr><td>商品名称 / 药品名称 / 产品名称 / 产品 / 药品</td><td>✅</td><td>归一到品种家族（见 4.4）</td></tr><tr><td>会员姓名 / 客户姓名 / 患者姓名 / 姓名</td><td>✅</td><td>患者身份主键之一</td></tr><tr><td>会员电话 / 手机号 / 联系电话 / 手机 / 电话</td><td>强烈建议</td><td><strong>患者匹配优先用电话</strong>；缺失时退化为按姓名匹配</td></tr><tr><td><strong>销售数量 / 数量</strong></td><td>建议</td><td><strong>购药数量</strong>，用于「一次买多个周期」的计算（见 5.2）。缺失时按 1 处理</td></tr><tr><td>会员号 / 会员编号 / 会员卡号</td><td>建议</td><td>「仅会员号」脱敏方式需要它</td></tr><tr><td>医疗单位 / 首诊医院 / 就诊医院 / 医院</td><td>建议</td><td>筛选维度</td></tr><tr><td>药房名称 / 门店 / 药店名称 / 药店 / 药房</td><td>建议</td><td>筛选维度</td></tr><tr><td>处方医生 / 开单医生 / 医生</td><td>建议</td><td>名单展示的医生列</td></tr><tr><td>处方科室 / 科室 / 就诊科室</td><td>可选</td><td>名单展示</td></tr><tr><td>适应症 / 临床诊断 / 诊断</td><td>可选</td><td></td></tr><tr><td>年龄 / 性别</td><td>可选</td><td></td></tr></tbody></table>
+<h3 id="43-随访任务可选">4.3 随访任务（可选）</h3>
+<table><thead><tr><th>列（含容错写法）</th><th>说明</th></tr></thead><tbody><tr><td>任务状态</td><td>用于区分「已完成」与未执行任务</td></tr><tr><td>患者 / 患者姓名 / 姓名</td><td>患者身份（匹配兜底）</td></tr><tr><td>联系电话 / 手机号 / 电话 / 电话号码</td><td>患者匹配首选</td></tr><tr><td>计划执行时间 / 计划执行日期</td><td>无执行时间时作为随访日期</td></tr><tr><td>执行时间</td><td><strong>优先作为随访日期</strong></td></tr><tr><td>产品 / 药品 / 商品</td><td>用于"同品种优先"匹配</td></tr><tr><td>服务摘要 / 任务摘要 / 随访类型 / 任务类型</td><td>随访类型展示</td></tr><tr><td>执行人 / 随访人 / 经办人 / 负责人 / 坐席 / 话务员 / 客服</td><td>筛选维度「随访人」</td></tr><tr><td>随访小结 / 小结 / 随访记录 / 患者反馈内容 / 患者反馈 / 备注</td><td>自由文本，参与信号与原因判定</td></tr><tr><td>取消原因</td><td></td></tr><tr><td>患者目前的用药状态</td><td>信号判定</td></tr><tr><td>是否已按时购药 / 已按时购药 / 用药周期状态</td><td>信号判定</td></tr><tr><td>是否判定患者属于易脱落 / 是否脱落 / 是否确认脱落</td><td>信号判定</td></tr><tr><td>判断为易脱落的原因 / 脱落原因 / 脱落·流失原因</td><td>原因分类</td></tr><tr><td>推迟用药的原因 / 延迟用药的具体原因 / 未按计划持续用药原因</td><td>原因分类</td></tr><tr><td>停药的原因是什么 / 停药的具体原因 / 停止用药，主要是谁的建议</td><td>原因分类</td></tr><tr><td>还在按照处方继续使用 ××× / 患者近一次用药情况 / 剂量类列</td><td>信号判定</td></tr></tbody></table>
+<blockquote><p><strong>多模板合并大表</strong>可以直接用：同一个逻辑字段在不同模板里列名不同，系统会<strong>把所有命中的列都收集起来</strong>，逐行取有值的那一列（见附录 A 的多值字段）。</p></blockquote>
+<h3 id="44-患者用药周期表可选">4.4 患者用药周期表（可选）</h3>
+<table><thead><tr><th>列</th><th>说明</th></tr></thead><tbody><tr><td>患者 / 患者姓名 / 姓名</td><td>患者标识</td></tr><tr><td>用药周期 / 周期天数 / 购药周期 / 周期</td><td>天数，正整数</td></tr></tbody></table>
+<p><strong>周期取值优先级</strong>：<code>患者用药周期表（按姓名）</code> → <code>品种标准周期</code> → <code>30 天</code></p>
+<p><strong>品种标准周期</strong>：内置 百泽安 21 天 / 百悦泽 28 天 / 索托克拉 28 天；<strong>只按上传数据中实际出现的品种生成</strong>，出现的新品种默认 30 天，界面可逐个修改。</p>
+<p><strong>品种家族归一</strong>：商品名含以下关键词即归入对应家族——</p>
+<table><thead><tr><th>家族</th><th>关键词</th><th>标准周期</th></tr></thead><tbody><tr><td>百泽安</td><td>替雷利珠 / 百泽安 / tislelizumab</td><td>21 天</td></tr><tr><td>百悦泽</td><td>泽布替尼 / 百悦泽 / zanubrutinib</td><td>28 天</td></tr><tr><td>索托克拉</td><td>索托克拉 / sotoclax</td><td>28 天</td></tr></tbody></table>
+<p>未匹配的名称原样截断展示（不丢弃）。</p>
+<hr>
+<h2 id="5-核心计算口径最重要">5. 核心计算口径（最重要）</h2>
+<blockquote><p>这一节是看板的"心脏"。<strong>所有数字都从这几条规则来</strong>，排查问题时先回到这里。</p></blockquote>
+<h3 id="51-第一步得到每个患者品种的购药记录">5.1 第一步：得到每个患者×品种的购药记录</h3>
+<p>按 <strong>电话数字</strong> 聚合（无电话则按姓名），每个患者每个品种得到一串购药记录：</p>
+<pre><code>[{日期: 2026-08-01, 数量: 3}, {日期: 2026-08-20, 数量: 1}, ...]</code></pre>
+<ul><li>购药数量做容错解析：<code>2盒</code> → 2、<code>1.5</code> → 1.5、<code>1,200</code> → 1200；</li></ul>
+<p>  <strong>缺失、非数字、非正数一律按 1</strong>（等价于"不放大"，与历史行为一致）。</p>
+<ul><li><strong>同一天的多行数量相加</strong>（3 行各买 1 支 = 一次买了 3 支）。</li></ul>
+<h3 id="52-第二步算出本次购药覆盖天数">5.2 第二步：算出「本次购药覆盖天数」</h3>
+<pre><code>覆盖天数 = 购药数量 × 单次用药周期        （该品种勾选「按数量」时）
+覆盖天数 = 单次用药周期                   （未勾选时，数量按 1 计）</code></pre>
+<p>「按数量」是<strong>每个品种一个开关，默认关闭</strong>。所以： <strong>默认状态下，本功能不影响任何历史结果</strong>——想让哪个品种"一次买几个周期就按几个周期算"，把它的「按数量」勾上。</p>
+<h3 id="53-第三步按所选周期算法推进库存耗尽日">5.3 第三步：按所选「周期算法」推进「库存耗尽日」</h3>
+<p>三条记录按日期升序逐条推进，<code>库存耗尽日</code> 就是<strong>下次应购日</strong>：</p>
+<pre><code>剩余库存 = 上次库存耗尽日 - 本次购药日
+
+重置式     base = 本次购药日
+累计式     base = max(本次购药日, 上次库存耗尽日)
+累计+容差  base = 剩余库存 ≤ 容差天数 ? 本次购药日 : 上次库存耗尽日
+
+库存耗尽日 = base + 本次覆盖天数</code></pre>
+<table><thead><tr><th>算法</th><th>语义</th><th>什么时候用</th></tr></thead><tbody><tr><td><strong>重置式</strong>（默认）</td><td>每次购药都从本次重新起算</td><td>最直观、最好解释</td></tr><tr><td><strong>累计式</strong></td><td>只要还有剩余库存就往后顺延</td><td>患者习惯囤药</td></tr><tr><td><strong>累计 + 容差</strong></td><td>剩余库存 &gt; 容差算囤药（顺延）；≤ 容差算小幅提前（重新起算）</td><td>兼顾两者，避免小幅提前累积导致预测日期长期漂移</td></tr></tbody></table>
+<p><strong>容差天数默认 7 天</strong>，仅在「累计+容差」下可改。</p>
+<p><strong>关键性质</strong>：药已吃完才买（剩余库存为负）时，三种算法<strong>都自动走重置分支</strong>——不需要额外判断。</p>
+<p><strong>实例（周期 21 天）</strong>：8/1 买 3 个周期、8/20 再买 1 个周期</p>
+<table><thead><tr><th>算法</th><th>8/1 的覆盖</th><th>8/20 的处理</th><th>下次应购日</th></tr></thead><tbody><tr><td>重置式</td><td>—</td><td>从 8/20 重新起算 21 天</td><td><strong>9/10</strong></td></tr><tr><td>累计式</td><td>覆盖到 10/3</td><td>剩余 44 天 &gt; 0，顺延 21 天</td><td><strong>10/24</strong></td></tr><tr><td>累计+容差(7)</td><td>覆盖到 10/3</td><td>剩余 44 天 &gt; 7 → 顺延</td><td><strong>10/24</strong></td></tr><tr><td>累计+容差(60)</td><td>覆盖到 10/3</td><td>剩余 44 天 ≤ 60 → 重置</td><td><strong>9/10</strong></td></tr></tbody></table>
+<h3 id="54-应购药日期与预判应购日">5.4 「应购药日期」与「预判应购日」</h3>
+<ul><li><strong>应购药日期</strong> = 推进到<strong>全部</strong>购药记录后的库存耗尽日 = <strong>下次应该买的日期</strong></li><li><strong>预判应购日</strong> = 推进到「<strong>除最后一次以外</strong>」记录的库存耗尽日 = <strong>上一次本该买的日期</strong></li></ul>
+<p>「预判应购日」用于对比实际购药是提前还是延后。<strong>仅当该患者该品种有 ≥2 条购药记录时才有值</strong>（只有 1 条时无参照，显示 <code>—</code>）。</p>
+<h3 id="55-随访匹配规则">5.5 随访匹配规则</h3>
+<ol><li>先按<strong>电话数字</strong>找该患者的随访；找不到再按<strong>姓名</strong>。</li><li>优先取<strong>同品种</strong>的随访；同品种一条都没有时，用该患者的全部随访。</li><li>优先「<strong>真实执行过</strong>」的随访（有执行时间，或任务状态含「已完成」），避免未执行的空任务干扰。</li><li>在上一步的结果里，取<strong>应购药日期之前、最近的一次</strong>；若之前一条都没有，取<strong>之后最早的一条</strong>。</li><li>随访日期 = <code>执行时间</code> 的日期部分，缺失时用 <code>计划执行时间</code>。</li></ol>
+<h3 id="56-状态判定周维度-购药事实优先">5.6 状态判定（周维度 · 购药事实优先）</h3>
+<p>时间窗口 = <strong>所选周</strong>（上周 / 本周 / 下周，默认本周），其起止由「<strong>参考日</strong>」和「<strong>周截止日</strong>」共同决定（见 5.7）。</p>
+<p>判定顺序（<strong>从上往下，命中即停</strong>）：</p>
+<table><thead><tr><th>顺序</th><th>条件</th><th>结果</th></tr></thead><tbody><tr><td>1</td><td><strong>所选周内有购药记录</strong></td><td><strong>应回购 · 应回已回</strong></td></tr><tr><td>2</td><td>应购药日期 &lt; 周首</td><td><strong>已逾期</strong></td></tr><tr><td>3</td><td>应购药日期 ≤ 周末</td><td><strong>应回购 · 应回未回</strong></td></tr><tr><td>4</td><td>其余</td><td><strong>未到期</strong></td></tr></tbody></table>
+<ul><li><strong>应回购（总集）= 应回未回 + 应回已回</strong></li><li>第 1 条最优先：只要当周有购药记录就算「已回」，<strong>包括提前囤药的情况</strong></li><li>应购药日期落在所选周的行会<strong>置顶显示 + 浅金色底色</strong>，导出 Excel 同步整行浅金底</li></ul>
+<h3 id="57-时间口径参考日-周截止日">5.7 时间口径：参考日 + 周截止日</h3>
+<ul><li><strong>参考日</strong>：默认今天，可手动改为历史日期以回看当时的状态（回看历史周）。</li><li><strong>周截止日</strong>：定义"本周"在哪一天结束，默认<strong>周日</strong>（= 自然周 周一~周日）。</li></ul>
+<table><thead><tr><th>周截止日选择</th><th>得到的"本周"</th></tr></thead><tbody><tr><td>周日（自然周）</td><td>周一 ~ 周日</td></tr><tr><td>周五</td><td><strong>上周六 ~ 本周五</strong></td></tr><tr><td>周六</td><td>周日 ~ 周六</td></tr><tr><td>周一 / 周二 / 周三 / 周四</td><td>周二~周一 / 周三~周二 / …</td></tr></tbody></table>
+<p>算法：本周 = <code>[截止日-6, 截止日]</code>，截止日取「<strong>参考日当天或之后</strong>最近的该星期几」，因此<strong>本周必定包含参考日</strong>。上周 / 下周各平移 7 天。</p>
+<hr>
+<h2 id="6-界面操作手册">6. 界面操作手册</h2>
+<p>页面从上到下分五区：</p>
+<h3 id="61-上传区">6.1 上传区</h3>
+<ul><li>整条可点击选文件，也可拖拽；支持一次多选。</li><li>每个文件会显示<strong>自动识别出的类型</strong>（销售 / 随访 / 周期 / 未识别）。</li><li><strong>未识别</strong>的文件会在点「开始分析」时被拦下并列出文件名，移除后重试即可。</li><li>分析完成后上传区仍保留，可增删文件后再次分析。</li><li>顶部会显示：<code>销售明细 N 条 · 随访任务 M 条 · 用药周期 K 人</code>（若本轮有回传数据接续，会追加提示）。</li></ul>
+<h3 id="62-判定配置栏决定怎么算">6.2 判定配置栏（决定"怎么算"）</h3>
+<table><thead><tr><th>控件</th><th>作用</th></tr></thead><tbody><tr><td>时间：上周 / 本周 / 下周</td><td>状态判定的时间窗口</td></tr><tr><td>参考日</td><td>时间基准，改成历史日期即可回看历史周</td></tr><tr><td><strong>周截止日</strong></td><td>定义"本周"的起止（见 5.7）</td></tr><tr><td>右侧范围标签</td><td>实时显示所选周的<strong>实际日期区间与截止星期</strong></td></tr><tr><td><strong>周期算法</strong></td><td>重置式 / 累计式 / 累计+容差（见 5.3）</td></tr><tr><td><strong>容差</strong></td><td>天数，仅在「累计+容差」下可改</td></tr><tr><td>标准周期</td><td>每个品种一个天数输入框 + <strong>「按数量」勾选框</strong>（勾选后数量×周期，见 5.2）</td></tr></tbody></table>
+<h3 id="63-筛选区">6.3 筛选区</h3>
+<ul><li><strong>状态卡片</strong>：应回购 / 未到期 / 已逾期（+ 应回购细分 chips）。点选即筛选；<strong>卡片计数会随其他筛选实时变化</strong>。</li><li><strong>未购药原因 chips</strong>：按原因分类筛选。</li><li><strong>多选下拉</strong>：品种 / 医院 / 药房 / 随访人（多选=或）。</li><li><strong>关键词搜索</strong>：匹配 患者 / 电话 / 医生 / 医院 / 药房 / 品种 / 随访人。</li><li><strong>清空全部</strong>：回到默认状态（本周 + 今天）。</li><li>所有筛选条件<strong>叠加生效（交集）</strong>。</li></ul>
+<h3 id="64-脱敏与列显隐">6.4 脱敏与列显隐</h3>
+<p>筛选区下方：</p>
+<ul><li><strong>姓名 / 医生 / 电话</strong> 三组「脱敏 ⇄ 不脱敏」开关，<strong>三者相互独立</strong>，实时影响列表与导出（所见即所得）。</li><li><strong>脱敏方式</strong>（姓名与医生共用）：<code>保留首字</code> / <code>保留首+末字</code>（默认）/ <code>仅会员号</code> / <code>全部隐藏</code>。替换几个字符就有几个 <code>*</code>。</li><li class="sub"><ul><li>选「仅会员号」时：患者列显示会员号、医生列显示 <code>—</code>、<strong>电话列自动隐藏</strong>。</li></ul></li><li><strong>表头显隐</strong>：任意列可隐藏/显示。</li></ul>
+<h3 id="65-名单表">6.5 名单表</h3>
+<table><thead><tr><th>列</th><th>说明</th></tr></thead><tbody><tr><td>患者 / 电话 / 医生 / 科室</td><td>按脱敏开关取值</td></tr><tr><td>品种 / 医院 / 药房</td><td></td></tr><tr><td>最近购药</td><td>最近一次购药日期</td></tr><tr><td><strong>购药数量</strong></td><td><strong>最近一次的合计数量</strong>（同日多行相加后）</td></tr><tr><td>周期(天)</td><td>该患者该品种实际使用的周期</td></tr><tr><td>应购药日期</td><td>下次应购日期；「应回已回」行显示预判应购日</td></tr><tr><td>距今天数</td><td>相对真实今天；逾期标红加粗</td></tr><tr><td>匹配随访时间 / 随访类型 / 随访人</td><td>来自匹配到的那条随访</td></tr><tr><td>状态</td><td>主状态（+ 应回购细分）</td></tr><tr><td>未购药原因</td><td><strong>可点选</strong>：自动判定预填，人工点选覆盖</td></tr><tr><td>随访信号</td><td>正常状态 / 预判延期 / 已脱落（按颜色区分）</td></tr><tr><td>跟进备注</td><td><strong>仅「应回购 / 已逾期」可填写</strong>（其余状态显示 <code>—</code>），内容随快照与回传保存</td></tr></tbody></table>
+<ul><li><strong>展开行</strong>（点行）：显示该患者的随访明细（用药状态、是否按时购药、易脱落标记与原因、停药/推迟原因、随访小结）+ 跟进备注。</li><li><strong>已逾期 + 未到期</strong> 行也能标注未购药原因；无标注时按状态显示占位（已购药 / — / 未标）。</li></ul>
+<h3 id="66-整体小结">6.6 整体小结</h3>
+<p>按品种分别生成，可切换品种、复制成文本。内容包含：</p>
+<ol><li>所选周应回购人数（应回已回 / 应回未回）</li><li>未购药原因分类汇总（<strong>父类人数 = 子类之和</strong>）</li><li>下周预计复购人数（正常回购 / 推迟，附推迟原因）</li><li>「<strong>管理分类</strong>」可增删改未购药原因分类树 / 加子类 / 恢复默认，<strong>「未购药原因」列选项与小结文案同步跟随</strong>。</li><li>小结统计范围<strong>跟随医院 / 药房筛选</strong>，品种由面板内 chips 切换。</li></ol>
+<hr>
+<h2 id="7-导出与快照">7. 导出与快照</h2>
+<p>名单区右侧四个按钮：</p>
+<table><thead><tr><th>按钮</th><th>产物</th><th>说明</th></tr></thead><tbody><tr><td><strong>导出名单</strong></td><td><code>.xlsx</code></td><td>表头加粗 + 品牌色底；状态列着色（应回购红 / 已逾期橙 / 未到期蓝，细分：应回未回红、应回已回绿）；逾期天数标红；周内应购行整行浅金底</td></tr><tr><td><strong>导出随访回传表</strong></td><td><code>.xlsx</code></td><td>见第 8 节</td></tr><tr><td>下载脱敏快照</td><td>单文件 <code>.html</code></td><td>姓名/电话/医生已脱敏，<strong>不含明文个人信息，可安全外发</strong></td></tr><tr><td>下载不脱敏快照</td><td>单文件 <code>.html</code></td><td>含明文个人信息，<strong>仅可发给可信接收方</strong>（生成前有风险提示）</td></tr></tbody></table>
+<p><strong>导出名单遵循"所见即所得"</strong>：内容按当前三组脱敏开关输出。想要全明文名单 → 把姓名/医生/电话都切到「不脱敏」再导出（此时会弹隐私提示）。</p>
+<p><strong>快照特性</strong>：单文件、离线可双击打开、只读展示当前筛选后的名单，<strong>手动填写的跟进备注与原因修正会一并保存</strong>。</p>
+<hr>
+<h2 id="8-随访回传闭环">8. 随访回传闭环</h2>
+<p><strong>解决的问题</strong>：在看板里填的跟进备注、点选的未购药原因，原本关掉页面就没了，下一轮又要重填。</p>
+<p><strong>用法（两步）</strong></p>
+<ol><li>本轮工作完成后，点「<strong>导出随访回传表</strong>」→ 得到 <code>随访回传_日期.xlsx</code>。</li><li><strong>下一轮</strong>上传数据时，把这个文件<strong>连同销售/随访/周期表一起拖进去</strong> → 系统自动接续。</li></ol>
+<p><strong>接续效果</strong></p>
+<table><thead><tr><th>回传内容</th><th>下一轮的表现</th></tr></thead><tbody><tr><td>跟进备注</td><td>回到「跟进备注」列，<strong>仍可继续编辑</strong></td></tr><tr><td>未购药原因</td><td><strong>等同人工点选</strong>（优先于文本自动判定）</td></tr></tbody></table>
+<p>顶部会提示「已接续回传 N 条备注 / M 条原因」。<strong>已在本轮改过的内容不会被导入覆盖。</strong></p>
+<h3 id="回传表结构如需手工造表照此列名">回传表结构（如需手工造表，照此列名）</h3>
+<table><thead><tr><th>列名</th><th>内容</th><th>说明</th></tr></thead><tbody><tr><td>任务状态</td><td>固定 <code>已完成</code></td><td><strong>识别签名</strong>，缺了会认不出</td></tr><tr><td>服务摘要</td><td>固定 <code>跟进回传</code></td><td><strong>识别签名</strong> + 回流标记</td></tr><tr><td>患者姓名</td><td>明文</td><td><strong>匹配键</strong></td></tr><tr><td>联系电话</td><td>明文</td><td><strong>匹配键（优先）</strong></td></tr><tr><td>产品</td><td>品种</td><td>用于同品种优先匹配</td></tr><tr><td>执行时间</td><td>导出当天</td><td>决定匹配到哪一周</td></tr><tr><td>执行人</td><td>随访人</td><td></td></tr><tr><td>未购药原因</td><td>中文标签（如 <code>脱落·经济</code>）</td><td>导入后等同人工点选</td></tr><tr><td>跟进备注</td><td>填写内容</td><td>导入后回填到「跟进备注」列</td></tr><tr><td>随访小结</td><td>原随访小结</td><td>保留原记录</td></tr></tbody></table>
+<p><strong>为什么必须明文</strong>：随访记录靠电话或姓名匹配到患者，脱敏后（<code>张*三</code> / <code>138****1111</code>）匹配不上。因此回传表<strong>强制明文，且含明文姓名与电话，只能在团队内部流转</strong>。</p>
+<p><strong>导出范围</strong>：只导出「有填写」的行（填了跟进备注 或 点选过未购药原因），避免把整张名单变成随访记录污染随访池。</p>
+<hr>
+<h2 id="9-隐私与合规">9. 隐私与合规</h2>
+<p>⚠️ <strong>这是本项目最需要严肃对待的部分。</strong></p>
+<p><strong>数据不出本机</strong>：所有解析与计算都在浏览器内完成，没有后端服务、没有接口调用、没有埋点。关掉浏览器即无残留（除非你生成了文件）。</p>
+<p><strong>四类产物的敏感度</strong></p>
+<table><thead><tr><th>产物</th><th>敏感度</th><th>可否外发</th></tr></thead><tbody><tr><td>脱敏快照</td><td>低（无明文个人信息）</td><td>✅ 可外发</td></tr><tr><td>脱敏状态下的名单页</td><td>低</td><td>仅限投屏/截图场景，注意别切到不脱敏</td></tr><tr><td><strong>导出名单（含不脱敏字段）</strong></td><td><strong>高</strong></td><td>⚠️ 仅限可信接收方</td></tr><tr><td><strong>随访回传表</strong></td><td><strong>高（强制明文）</strong></td><td>⚠️ 仅限团队内部</td></tr></tbody></table>
+<p><strong>操作建议</strong></p>
+<ul><li>投屏、共享屏幕、截图前，先确认三组脱敏开关的状态。</li><li>导出含明文时系统会弹隐私提示——<strong>不要习惯性点确定</strong>。</li><li>快照文件可以随意发给同事；回传表不行。</li><li>本机下载目录里的导出文件记得清理。</li></ul>
+<hr>
+<h2 id="10-维护与二次开发">10. 维护与二次开发</h2>
+<h3 id="101-构建">10.1 构建</h3>
+<pre><code>cd repurchase_dashboard
+python build.py            # 生成 index.html（Web 部署版，vendor 库外链）
+python build.py --single   # 生成 index.single.html（单文件版，库内联，约 2 MB）</code></pre>
+<blockquote><p><strong><code>index.html</code> 和 <code>index.single.html</code> 都是构建产物，不要手动改。</strong></p><p>改界面 → <code>index.template.html</code>；改逻辑 → <code>app.js</code> / <code>pipeline.js</code> / <code>mapping.js</code>；然后重跑 <code>build.py</code>。</p></blockquote>
+<h3 id="102-常见改动指引">10.2 常见改动指引</h3>
+<table><thead><tr><th>需求</th><th>改法</th></tr></thead><tbody><tr><td>支持一个新品种</td><td><code>mapping.js</code> → <code>PRODUCT_FAMILIES</code> 加一条（含关键词与标准周期）</td></tr><tr><td>新报表的列名和现有关键字对不上</td><td>对应 <code>KEYWORD_RULES</code> 里给该字段<strong>补一个关键词</strong>即可</td></tr><tr><td>判断"停药"的措辞有新说法</td><td><code>mapping.js</code> → <code>RE_DROPOUT_TXT</code> / <code>RE_NONSTD_TXT</code> / <code>RE_NORMAL_TXT</code></td></tr><tr><td>未购药原因要加一类</td><td>界面「管理分类」直接加（用户级）；要改内置默认则改 <code>DEFAULT_REASON_TREE</code></td></tr><tr><td>加一列到名单</td><td><code>app.js</code> → <code>LIST_COLS</code> 加 <code>["key", "列名"]</code>；<code>buildRows</code> 里把值放进 row 对象；导出列宽数组同步 +1</td></tr><tr><td>改默认周期算法 / 容差</td><td><code>app.js</code> → <code>state.cycleAlgo</code> / <code>state.cycleTol</code> 初值</td></tr></tbody></table>
+<h3 id="103-逻辑源文件的职责边界">10.3 逻辑源文件的职责边界</h3>
+<pre><code>index.template.html   ← HTML 骨架 + 全部 CSS（含 :root 变量）
+        │  build.py 内联 ↓
+mapping.js   纯常量与纯函数：品种归一、表类型签名、字段关键字、随访信号、原因分类
+pipeline.js  纯解析：SheetJS 读表 → 按签名识别类型 → 按关键字映射列 → 归一化记录
+app.js       业务：聚合购药记录 → 周期算法 → 状态判定 → 筛选 → 渲染 → 导出/快照/回传</code></pre>
+<hr>
+<h2 id="11-测试">11. 测试</h2>
+<pre><code>cd repurchase_dashboard
+node tests/_test_logic.js        # 状态分类边界
+node tests/_test_qtycycle.js     # 购药数量 × 周期、三种周期算法
+node tests/_test_weekrange.js    # 周截止日 / 参考日 / 周窗口
+node tests/_test_summary.js      # 整体小结与原因分类
+node tests/_test_export.js       # 导出内容与样式
+node tests/_test_callback.js     # 随访回传闭环（含导出→重新导入的端到端回环）
+node tests/_test_desentoggle.js  # 三组脱敏开关独立性
+node tests/_test_snapshot.js     # 快照剥离
+# 其余同理，全部跑一遍：
+for f in tests/_test_*.js; do node "$f" || echo "FAIL $f"; done</code></pre>
+<p><strong>当前状态</strong>：<code>tests/</code> 下共 <strong>19 个脚本</strong>（17 个 <code>_test_*.js</code> 用例 + 2 个诊断/核验辅助脚本）。其中 <strong>4 个依赖本机样例 Excel</strong>（<code>_test_detect</code> / <code>_test_e2e</code> / <code>_test_render</code> / <code>_test_snapshot_filter</code>），缺文件时自动打印"跳过"并以 0 退出；<strong>其余全部通过</strong>。</p>
+<p><strong>改动后的最低要求</strong>：改到判定逻辑，至少跑 <code>_test_logic</code> / <code>_test_qtycycle</code> / <code>_test_summary</code>；改到导出，跑 <code>_test_export</code>。</p>
+<hr>
+<h2 id="12-发布部署">12. 发布部署</h2>
+<h3 id="121-日常发布有仓库写权限">12.1 日常发布（有仓库写权限）</h3>
+<blockquote><p><strong>接手方注意</strong>：下面的命令以<strong>原团队的仓库</strong>为例（仅作流程示意）。</p><p>请先把仓库地址、账号换成<strong>你自己的</strong>，否则命令会指向原团队仓库。</p><p>顺带说明：这个交付包里没有 <code>.git</code>，也没配置任何远端，<strong>所以你不主动添加远端就推送不到任何地方</strong>。</p></blockquote>
+<pre><code>cd repurchase_dashboard
+python build.py &amp;&amp; python build.py --single     # 1. 重建产物
+
+git add -A
+git commit -m "……"
+git push origin main                              # 2. 推源码分支
+
+# 3. 同步单文件版到 gh-pages（Pages 的发布源）
+git worktree add .ghp-tmp gh-pages
+cp index.single.html .ghp-tmp/index.html
+cd .ghp-tmp &amp;&amp; git add -A &amp;&amp; git commit -m "同步单文件版（……）"
+cd .. &amp;&amp; git worktree remove .ghp-tmp --force
+git push origin gh-pages                          # 4. 推送发布分支</code></pre>
+<p>推送后 GitHub Pages 通常会自动重建。若没触发，手动触发一次：</p>
+<pre><code>TOKEN=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill | grep "^password=" | cut -d= -f2)
+curl -X POST -H "Authorization: token $TOKEN" \
+  https://api.github.com/repos/Lynx-Fanlv/reperchace_dashboard/pages/builds
+# 轮询确认：GET .../pages/builds/latest 直到 status=built</code></pre>
+<p><strong>验证发布</strong>：<code>curl -sL https://lynx-fanlv.github.io/reperchace_dashboard/ | grep -c 'id="exportBtn"'</code>，或直接强刷（Ctrl+F5）看界面。</p>
+<h3 id="122-自己部署一份无仓库权限时">12.2 自己部署一份（无仓库权限时）</h3>
+<ol><li>Fork 仓库，或新建仓库后把整个目录推上去。</li><li>仓库 <strong>Settings → Pages → Source = Deploy from a branch</strong>，选择 <strong><code>gh-pages</code> 分支 / <code>(root)</code></strong>。</li></ol>
+<p>   （若你的仓库还没有 <code>gh-pages</code> 分支，可先把 <code>index.single.html</code> 改名为 <code>index.html</code> 推到 <code>main</code>，并把 Source 指向 <code>main</code> / <code>(root)</code>。）</p>
+<ol><li>访问 <code>https://&lt;你的用户名&gt;.github.io/&lt;仓库名&gt;/</code>。</li></ol>
+<h3 id="123-零部署方式">12.3 零部署方式</h3>
+<p>直接把 <code>index.single.html</code> 发给同事，<strong>双击即用、离线可用</strong>，不需要任何服务器。</p>
+<hr>
+<h2 id="13-已知限制与注意事项">13. 已知限制与注意事项</h2>
+<table><thead><tr><th>项</th><th>说明</th></tr></thead><tbody><tr><td><strong>同一天重复行会被合并相加</strong></td><td>若销售明细里存在完全重复的记录（同一笔交易写了两遍），数量会被算成两倍、覆盖天数翻倍。发现某患者覆盖天数明显偏长时，先查原始行是否重复</td></tr><tr><td><strong>周期表按姓名匹配</strong></td><td>患者用药周期表以<strong>姓名</strong>为键。同名患者会互相覆盖；患者改名后匹配不到</td></tr><tr><td><strong>电话优先、姓名兜底</strong></td><td>销售表缺电话时退化为按姓名匹配，同名不同人会串数据</td></tr><tr><td><strong>预判应购日需 ≥2 条记录</strong></td><td>只有 1 条购药记录时无参照基准，该列显示 <code>—</code>，不呈现提前/延后</td></tr><tr><td><strong>提前购药一律算「已回」</strong></td><td>「所选周有购药即应回已回」是有意设计（购药事实优先），提前囤药也会计入已回购</td></tr><tr><td><strong>品种家族靠关键词</strong></td><td>商品名不含已知关键词的新药会被原样当作品种（不会丢数据，但周期需手工设）</td></tr><tr><td><strong>大文件性能</strong></td><td>纯前端解析，数万行量级没问题；超大文件（十万行+）首次解析会明显卡顿</td></tr><tr><td><strong>快照是只读的</strong></td><td>快照内不能继续编辑或重新分析</td></tr><tr><td><strong>回传表必须明文</strong></td><td>见第 8 节，这决定了它只能内部流转</td></tr></tbody></table>
+<hr>
+<h2 id="14-排错-faq">14. 排错 FAQ</h2>
+<p><strong>Q：上传后提示「未识别」怎么办？</strong> 逐个检查该文件的表头是否含足够的关键字：销售表需含 <code>销售时间</code> + <code>会员姓名</code>；随访表需含 <code>任务状态</code> + <code>服务摘要</code>。缺了就往 <code>mapping.js</code> 的 <code>TABLE_SIGNATURES</code> / <code>KEYWORD_RULES</code> 里补关键词。</p>
+<p><strong>Q：列表是空的 / 一个人都没有？</strong> 先看顶部 <code>销售明细 N 条</code>。N=0 说明销售表没被识别（表头问题）。N&gt;0 但列表空，通常是筛选条件叠加太严——点「清空全部」重来。</p>
+<p><strong>Q：某患者的状态看起来不对（明明买了却显示逾期）？</strong> 按顺序查：</p>
+<ol><li>该患者的<strong>电话</strong>在销售表和随访表里是否一致（电话不一致会退化成按姓名匹配）；</li><li><strong>周期</strong>取值是否正确（周期表 / 品种标准周期）；</li><li>「<strong>按数量</strong>」是否该品种勾上了而<strong>购药数量</strong>列是空的；</li><li><strong>周期算法</strong>是否与预期一致（重置 vs 累计会差出很多天）；</li><li><strong>参考日 / 周截止日</strong>是否被改过。</li></ol>
+<p><strong>Q：改了代码但页面没变化？</strong> 忘了跑 <code>python build.py</code>。<code>index.html</code> 是产物，直接改源码不生效。</p>
+<p><strong>Q：导出的 Excel 列不对 / 少了列？</strong> 先检查「表头显隐」是否隐藏了列——导出跟随当前可见列（「仅会员号」模式下电话列也会被去掉）。</p>
+<p><strong>Q：<code>push</code> 报连接 github.com 失败？</strong> 本机对 <code>github.com:443</code> 存在间歇性不通（但 <code>api.github.com</code> 与 Pages 站点正常）。<strong>不要放弃</strong>，间隔 15 秒重试 8~10 次通常就能成功。</p>
+<p><strong>Q：<code>git revert</code> / <code>checkout</code> 之后文件莫名消失？</strong> 本机有文件删除拦截层，曾在 <code>git revert</code> 后误删整个 <code>tests/</code> 目录。<strong>这类 git 操作后务必 <code>ls</code> 关键目录</strong>；若真丢了，<code>git restore --worktree &lt;目录&gt;/</code> 可全部找回（内容在 git 里没丢）。</p>
+<hr>
+<h2 id="附录-a字段映射关键字全表">附录 A：字段映射关键字全表</h2>
+<p>列标题<strong>包含</strong>下列任一关键词即命中（不区分大小写、忽略空白）。同一字段命中多列时取命中数最多的那一列。</p>
+<h3 id="销售明细">销售明细</h3>
+<table><thead><tr><th>字段</th><th>关键词</th></tr></thead><tbody><tr><td>sales_time</td><td>销售时间 / 购药时间 / 成交时间</td></tr><tr><td>order_status</td><td>订单状态</td></tr><tr><td>product</td><td>商品名称 / 药品名称 / 产品名称 / 产品 / 药品</td></tr><tr><td>qty</td><td>销售数量 / 数量</td></tr><tr><td>amount</td><td>含税金额 / 无税金额 / 实收金额 / 金额</td></tr><tr><td>member_id</td><td>会员号 / 会员编号 / 会员卡号</td></tr><tr><td>patient_name</td><td>会员姓名 / 客户姓名 / 患者姓名 / 姓名</td></tr><tr><td>phone</td><td>会员电话 / 手机号 / 联系电话 / 手机 / 电话</td></tr><tr><td>hospital</td><td>医疗单位 / 首诊医院 / 就诊医院 / 医院</td></tr><tr><td>pharmacy</td><td>药房名称 / 门店 / 药店名称 / 药店 / 药房</td></tr><tr><td>physician</td><td>处方医生 / 开单医生 / 医生</td></tr><tr><td>department</td><td>处方科室 / 科室 / 就诊科室</td></tr><tr><td>indication</td><td>适应症 / 临床诊断 / 诊断</td></tr><tr><td>age / gender</td><td>年龄 / 性别</td></tr></tbody></table>
+<h3 id="随访任务单值字段">随访任务（单值字段）</h3>
+<table><thead><tr><th>字段</th><th>关键词</th></tr></thead><tbody><tr><td>task_status</td><td>任务状态</td></tr><tr><td>f_patient_name</td><td>患者 / 患者姓名 / 姓名</td></tr><tr><td>is_key</td><td>是否重点患者 / 重点患者</td></tr><tr><td>patient_id</td><td>患者编号 / 患者编码 / 编号</td></tr><tr><td>f_phone</td><td>联系电话 / 手机号 / 电话 / 电话号码</td></tr><tr><td>plan_time</td><td>计划执行时间 / 计划执行日期</td></tr><tr><td>f_product</td><td>产品 / 药品 / 商品</td></tr><tr><td>f_indication</td><td>适应症</td></tr><tr><td>task_no</td><td>任务编号 / 任务ID</td></tr><tr><td>summary_type</td><td>服务摘要 / 任务摘要 / 随访类型 / 任务类型</td></tr><tr><td>create_time</td><td>创建时间</td></tr><tr><td>executor</td><td>执行人 / 随访人 / 经办人 / 负责人 / 坐席 / 话务员 / 客服</td></tr><tr><td>exec_time</td><td>执行时间（排除含"计划"的列）</td></tr><tr><td>cancel_reason</td><td>取消原因</td></tr><tr><td>reason_label</td><td>未购药原因 / 未购药原因分类（回传表专用）</td></tr><tr><td>callback_note</td><td>跟进备注（回传表专用）</td></tr></tbody></table>
+<h3 id="随访任务多值字段跨列取有值者">随访任务（多值字段：跨列取有值者）</h3>
+<table><thead><tr><th>字段</th><th>关键词</th></tr></thead><tbody><tr><td>usage_status</td><td>患者目前的用药状态</td></tr><tr><td>purchased_on_time</td><td>是否已按时购药 / 已按时购药 / 用药周期状态</td></tr><tr><td>is_dropout</td><td>是否判定患者属于易脱落 / 是否脱落 / 是否确认脱落</td></tr><tr><td>dropout_reason</td><td>判断为易脱落的原因 / 脱落原因 / 脱落/流失原因</td></tr><tr><td>still_using</td><td>还在按照处方继续使用</td></tr><tr><td>near_usage</td><td>患者近一次用药情况</td></tr><tr><td>delay_reason</td><td>推迟用药的原因 / 延迟用药的具体原因 / 未按计划持续用药原因</td></tr><tr><td>stop_reason</td><td>停药的原因是什么 / 停药的具体原因 / 停止用药，主要是谁的建议</td></tr><tr><td>dosage</td><td>的用法用量 / 当前用法用量</td></tr><tr><td>follow_note</td><td>随访小结 / 小结 / 随访记录 / 患者反馈内容 / 患者反馈 / 备注</td></tr></tbody></table>
+<h3 id="患者用药周期表">患者用药周期表</h3>
+<table><thead><tr><th>字段</th><th>关键词</th></tr></thead><tbody><tr><td>c_patient_name</td><td>患者 / 患者姓名 / 姓名</td></tr><tr><td>cycle_days</td><td>用药周期 / 周期天数 / 购药周期 / 周期</td></tr></tbody></table>
+<h3 id="表类型识别签名">表类型识别签名</h3>
+<table><thead><tr><th>类型</th><th>签名关键字</th></tr></thead><tbody><tr><td>销售明细</td><td>销售时间 + 会员姓名（强规则）；签名：销售时间 / 商品名称 / 会员姓名 / 药房名称</td></tr><tr><td>随访任务</td><td><strong>任务状态 + 服务摘要（强规则）</strong>；签名：任务状态 / 服务摘要 / 联系电话 / 计划执行时间</td></tr><tr><td>用药周期</td><td>用药周期</td></tr></tbody></table>
+<hr>
+<h2 id="附录-b术语表">附录 B：术语表</h2>
+<table><thead><tr><th>术语</th><th>含义</th></tr></thead><tbody><tr><td><strong>参考日</strong></td><td>时间基准日期，默认今天。改它即可回看任意历史周</td></tr><tr><td><strong>周截止日</strong></td><td>定义"本周"在哪天结束。默认周日 = 自然周</td></tr><tr><td><strong>所选周</strong></td><td>状态判定的时间窗口（上周/本周/下周 之一）</td></tr><tr><td><strong>单次用药周期</strong></td><td>一次用药覆盖的天数，来自周期表或品种标准周期</td></tr><tr><td><strong>购药数量</strong></td><td>销售明细的「销售数量」，一次购买几个单位（配合「按数量」开关使用）</td></tr><tr><td><strong>覆盖天数</strong></td><td>本次购药能撑多少天 = 数量 × 周期</td></tr><tr><td><strong>库存耗尽日</strong></td><td>按周期算法推进得到的"药吃完了"的日期</td></tr><tr><td><strong>应购药日期</strong></td><td>下次应该买的日期 = 全部购药记录推进后的库存耗尽日</td></tr><tr><td><strong>预判应购日</strong></td><td>上一次本该买的日期（用于算提前/延后），需 ≥2 条购药记录</td></tr><tr><td><strong>应回未回</strong></td><td>应购日落在所选周、当周没买</td></tr><tr><td><strong>应回已回</strong></td><td>所选周内有购药记录（含提前购药）</td></tr><tr><td><strong>随访信号</strong></td><td>从匹配到的随访内容判出的三类：正常状态 / 预判延期 / 已脱落</td></tr><tr><td><strong>未购药原因</strong></td><td>可人工点选的分类树（推迟购药 / 延长周期 / 脱落 / 转渠道 / 随访失败未探寻原因）</td></tr><tr><td><strong>回传表</strong></td><td>把看板填写内容导成随访格式，供下一轮自动接续</td></tr></tbody></table>
+<hr>
+<p><em>文档随代码演进。修改核心口径时请同步更新本文件与 <code>README.md</code>。</em></p>
+</div></body></html>
